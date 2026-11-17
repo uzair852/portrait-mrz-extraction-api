@@ -1,0 +1,15 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Unused older face detector (replaced by YuNet)
+res10_300x300_ssd_iter_140000.caffemodel
+deploy.prototxt
+
+# Office source files (keep the PDFs only)
+*.pptx
+*.docx

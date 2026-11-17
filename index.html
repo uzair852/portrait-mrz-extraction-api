@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ID Document Extractor</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #1f3a4d, #3a9188);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 20px;
+  }
+  .card {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+  h1 { font-size: 24px; color: #1f3a4d; margin-bottom: 6px; }
+  p.subtitle { color: #777; font-size: 14px; margin-bottom: 28px; line-height: 1.4; }
+  .dropzone {
+    border: 2px dashed #c7d3d6;
+    border-radius: 12px;
+    padding: 28px 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 20px;
+  }
+  .dropzone:hover { border-color: #3a9188; background: #f4f9f8; }
+  .dropzone p { margin: 8px 0 0; color: #888; font-size: 13px; }
+  .dropzone-icon { font-size: 32px; }
+  #fileInput { display: none; }
+  #fileName { font-size: 13px; color: #3a9188; margin-top: 6px; font-weight: 600; }
+  button {
+    background: #3a9188;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+  }
+  button:hover { background: #2f776f; }
+  button:disabled { background: #bbb; cursor: not-allowed; }
+  #result { margin-top: 24px; text-align: left; }
+  .portrait-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .portrait-row img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 3px solid #f0f0f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .confidence { font-size: 12px; color: #999; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table td { padding: 8px 4px; border-bottom: 1px solid #f0f0f0; }
+  table td:first-child { color: #888; font-weight: 600; width: 42%; }
+  table td:last-child { color: #1f3a4d; font-weight: 500; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #3a9188; font-weight: 700; margin: 18px 0 6px; }
+  .message { margin-top: 14px; font-size: 14px; font-weight: 500; }
+  .error { color: #c0392b; }
+  .success { color: #2f776f; }
+  .na { color: #bbb; font-style: italic; }
+  .banner { padding: 12px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600; margin-bottom: 16px; }
+  .banner-expired { background: #fdecea; color: #c0392b; border: 1px solid #f5c6cb; }
+  .banner-soon { background: #fff8e1; color: #a06b00; border: 1px solid #ffe082; }
+  .banner-valid { background: #eafaf3; color: #1e7e5e; border: 1px solid #b7ebd3; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>ID Document Extractor</h1>
+  <p class="subtitle">Upload an ID card or passport. We'll extract the portrait photo, read the MRZ, and check the document's validity.</p>
+
+  <label class="dropzone" for="fileInput">
+    <div class="dropzone-icon">&#128247;</div>
+    <p id="dropText">Click to choose an image</p>
+    <div id="fileName"></div>
+  </label>
+  <input type="file" id="fileInput" accept="image/*" onchange="showFileName()">
+
+  <button id="uploadBtn" onclick="uploadImage()">Extract Information</button>
+  <div id="result"></div>
+</div>
+
+<script>
+function showFileName() {
+  const fileInput = document.getElementById("fileInput");
+  const fileName = document.getElementById("fileName");
+  if (fileInput.files.length) {
+    fileName.textContent = fileInput.files[0].name;
+  }
+}
+
+function row(label, value) {
+  const displayValue = value ? value : '<span class="na">Not detected</span>';
+  return "<tr><td>" + label + "</td><td>" + displayValue + "</td></tr>";
+}
+
+async function uploadImage() {
+  const fileInput = document.getElementById("fileInput");
+  const resultDiv = document.getElementById("result");
+  const button = document.getElementById("uploadBtn");
+
+  if (!fileInput.files.length) {
+    resultDiv.innerHTML = "<p class=\"message error\">Please choose an image first.</p>";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Processing...";
+  resultDiv.innerHTML = "";
+
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+
+  try {
+    const response = await fetch("/extract", { method: "POST", body: formData });
+    const data = await response.json();
+
+    if (!response.ok) {
+      resultDiv.innerHTML = "<p class=\"message error\">" + data.detail + "</p>";
+    } else {
+      let html = "<p class=\"message success\">Extraction complete</p>";
+
+      if (data.expiry_status && data.expiry_status.message) {
+        let bannerClass = "banner-valid";
+        if (data.expiry_status.is_expired === true) bannerClass = "banner-expired";
+        else if (data.expiry_status.is_expired === false && data.expiry_status.message.includes("soon")) bannerClass = "banner-soon";
+        html += "<div class=\"banner " + bannerClass + "\">" + data.expiry_status.message + "</div>";
+      }
+
+      html += "<div class=\"portrait-row\">";
+      if (data.portrait_base64) {
+        html += "<img src=\"data:image/jpeg;base64," + data.portrait_base64 + "\" />";
+        html += "<div><div style=\"font-weight:600;color:#1f3a4d;\">Portrait extracted</div><div class=\"confidence\">Confidence: " + (data.portrait_confidence * 100).toFixed(1) + "%</div></div>";
+      } else {
+        html += "<div class=\"na\">No portrait detected</div>";
+      }
+      html += "</div>";
+
+      html += "<div class=\"section-label\">Document Details (MRZ)</div>";
+      if (data.mrz_fields) {
+        const f = data.mrz_fields;
+        html += "<table>";
+        html += row("Surname", f.surname);
+        html += row("Given Names", f.given_names);
+        html += row("Document Number", f.document_number);
+        html += row("Nationality", f.nationality);
+        html += row("Sex", f.sex);
+        html += row("Date of Birth", f.date_of_birth);
+        html += row("Expiry Date", f.expiration_date);
+        html += "</table>";
+      } else {
+        html += "<p class=\"na\">No MRZ data detected on this document.</p>";
+      }
+
+      resultDiv.innerHTML = html;
+    }
+  } catch (err) {
+    resultDiv.innerHTML = "<p class=\"message error\">Something went wrong. Please try again.</p>";
+  }
+
+  button.disabled = false;
+  button.textContent = "Extract Information";
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.ipynb_checkpoints
+__pycache__
+*.ipynb
+.git
+deploy.prototxt
+res10_300x300_ssd_iter_140000.caffemodel
+extracted_portrait.jpg
+download.jpg
+sample.png
+Screenshot*.jpg
