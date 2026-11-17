@@ -18,6 +18,11 @@ detector = cv2.FaceDetectorYN.create(
     score_threshold=0.7
 )
 
+# Use a Tesseract model trained on the OCR-B font used in passport MRZs.
+# The default English model misreads the '<' filler characters as letters (K, C, S).
+MRZ_OCR_PARAMS = "--tessdata-dir tessdata -l ocrb"
+
+
 def expand_box(x, y, w_box, h_box, img_w, img_h, margin_percent=0.25):
     margin_x = int(w_box * margin_percent)
     margin_y = int(h_box * margin_percent)
@@ -123,7 +128,7 @@ async def extract(file: UploadFile = File(...)):
         tmp_path = tmp.name
 
     try:
-        mrz = read_mrz(tmp_path)
+        mrz = read_mrz(tmp_path, extra_cmdline_params=MRZ_OCR_PARAMS)
         if mrz is not None:
             data = mrz.to_dict()
             expiration_date = format_mrz_date(data.get("expiration_date"), is_expiry=True)

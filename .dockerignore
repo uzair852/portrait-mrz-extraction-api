@@ -8,3 +8,7 @@ extracted_portrait.jpg
 download.jpg
 sample.png
 Screenshot*.jpg
+screenshots/
+*.pdf
+*.docx
+*.pptx
