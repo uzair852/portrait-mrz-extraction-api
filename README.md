@@ -141,3 +141,8 @@ The Docker image installs Tesseract automatically.
 
 - OCR-B Tesseract model: [Shreeshrii/tessdata_ocrb](https://github.com/Shreeshrii/tessdata_ocrb)
 - YuNet face detector: [OpenCV Zoo](https://github.com/opencv/opencv_zoo)
+
+## Documentation
+
+- [API_Documentation.pdf](API_Documentation.pdf) – endpoint reference
+- [Portrait_MRZ_API_Solution_Document.pdf](Portrait_MRZ_API_Solution_Document.pdf) – full design write-up
